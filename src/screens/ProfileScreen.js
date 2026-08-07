@@ -7,7 +7,7 @@ import {useAuth} from '../context/AuthContext';
 import {useLibrary} from '../context/LibraryContext';
 import {initials} from '../utils/format';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({navigation}) {
   const insets = useSafeAreaInsets();
   const {user, isGuest, logout} = useAuth();
   const {favorites, recent} = useLibrary();
@@ -34,9 +34,21 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.menu}>
+        {!isGuest && (
+          <MenuItem
+            icon="person-circle-outline"
+            label="Account settings"
+            onPress={() => navigation.navigate('Account')}
+          />
+        )}
+        <MenuItem
+          icon="options-outline"
+          label="Equalizer"
+          onPress={() => navigation.navigate('Equalizer')}
+        />
         <MenuItem icon="notifications-outline" label="Notifications" />
         <MenuItem icon="cloud-download-outline" label="Audio & downloads" />
-        <MenuItem icon="pulse-outline" label="Streaming quality" trailing="High" />
+        <MenuItem icon="pulse-outline" label="Streaming quality" trailing="320 kbps" />
         <MenuItem icon="information-circle-outline" label="About Dhun" />
       </View>
 
@@ -67,9 +79,9 @@ function Stat({label, value, icon}) {
   );
 }
 
-function MenuItem({icon, label, trailing}) {
+function MenuItem({icon, label, trailing, onPress}) {
   return (
-    <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={onPress}>
       <Ionicons name={icon} size={20} color={colors.text} />
       <Text style={styles.menuLabel}>{label}</Text>
       {!!trailing && <Text style={styles.menuTrailing}>{trailing}</Text>}

@@ -1,66 +1,154 @@
+<div align="center">
+
 # 🎵 Dhun
 
-A colorful React Native music streaming app for **Hindi · English · Punjabi · Bhojpuri · Marathi** songs, with login **and** guest mode, background playback, lock‑screen controls, per‑song **reactive theming**, an animated visualizer, and a **Creator Studio** for your own uploads.
+### *Feel every beat.*
 
-Powered by **JioSaavn's** free public web API (no key) — real mainstream tracks streamed at **320 kbps**.
+A polished, multi‑language music streaming app built with **React Native** — mainstream **Hindi · Punjabi · English · Tamil · South (Telugu/Tamil/Kannada/Malayalam) · Bhojpuri · Marathi** songs, real **320 kbps** streaming, a working **equalizer**, per‑song **reactive theming**, cloud **login from any device**, and a **Creator Studio** for your own uploads.
+
+`React Native 0.86` · `New Architecture` · `Firebase Auth` · `JioSaavn` · `Android`
+
+</div>
 
 ---
 
-## ✨ Features
+## ✨ Highlights
 
-- **Real mainstream catalog** — trending charts per language (Hindi, Punjabi, English, Bhojpuri, Marathi) plus full-text search across JioSaavn.
-- **True 320 kbps streaming** — media URLs are DES‑decrypted client-side (`crypto-js`) into direct stream links.
-- **Reactive UI** — every song derives its own vibrant color; the player background, glow, visualizer, seek bar, play button and badges all recolor per track ([songTheme.js](src/theme/songTheme.js)).
-- **Animated visualizer** — equalizer bars that pulse while playing ([Visualizer.js](src/components/Visualizer.js)).
-- **Auth** — email/password (stored locally) **plus "Continue without login"** guest mode; separate library per user.
-- **Playback** — full-screen player, persistent mini‑player, background audio, lock‑screen / notification controls (`react-native-track-player`).
-- **Library** — liked songs + recently played, per user.
-- **Creator Studio** — pick an audio file from the device and add it to your playable library.
+| | Feature |
+|---|---|
+| 🌍 | **7 language feeds** + a combined **South** section, powered by live JioSaavn trending charts |
+| 🎧 | **True 320 kbps** full‑track streaming (DES‑decrypted media URLs) |
+| 🎚️ | **Real equalizer** — 5 bands + 15 presets + bass boost (native `audiofx`) |
+| 🎨 | **Reactive UI** — the whole player recolors to each song |
+| 📊 | **Animated visualizer** that pulses with playback |
+| ☁️ | **Cloud accounts** — sign in from any device (Firebase Auth + Firestore) |
+| 🙅 | **Guest mode** — use everything without an account |
+| ▶️ | Background playback, lock‑screen controls, mini‑player, shuffle / repeat / sleep‑timer / speed |
+| 🎙️ | **Creator Studio** — add your own audio files to a playable library |
+| 💫 | Animated splash, smooth transitions & entrance animations |
+
+---
+
+## 📱 Screens
+
+`Splash → Login / Guest` · `Home (language feeds)` · `Search` · `Now Playing` · `Equalizer` · `Library (liked + recent)` · `Creator Studio` · `Profile`
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart TD
+  UI["Screens & Components"] --> CTX["Context layer"]
+  CTX -->|Auth| FBAuth["Firebase Auth (native)"]
+  CTX -->|Favourites / Recents| FS["Firestore (REST)"]
+  CTX -->|Playback| RNTP["react-native-track-player"]
+  CTX -->|Catalog| SAAVN["JioSaavn API + crypto-js"]
+  CTX -->|Guest / cache| AS["AsyncStorage"]
+  RNTP --> EQ["Native Equalizer (audiofx)"]
+```
+
+**State is organised into focused React Contexts:**
+
+| Context | Responsibility | Backend |
+|---------|----------------|---------|
+| `AuthContext` | login / register / guest | Firebase Auth (cloud) + AsyncStorage (guest) |
+| `LibraryContext` | favourites + recently played | Firestore REST (users) / AsyncStorage (guests) |
+| `UploadsContext` | Creator uploads | AsyncStorage + device file cache |
+| `PlayerContext` | playback, theme, shuffle/repeat/sleep/speed | react-native-track-player |
+
+---
 
 ## 🧱 Tech stack
 
 | Area | Choice |
 |------|--------|
-| Framework | React Native 0.86 (bare CLI, New Architecture) |
+| Framework | React Native 0.86 (bare CLI, New Architecture / bridgeless) |
 | Navigation | React Navigation (native-stack + bottom-tabs) |
-| Audio | react-native-track-player 4.1.2 (patched for New Arch) |
-| Music API | JioSaavn public web API (free, no key) |
-| Decryption | crypto-js (DES‑ECB, pure JS) |
-| Storage | @react-native-async-storage/async-storage |
+| Audio engine | react-native-track-player 4.1.2 *(patched for New Arch)* |
+| Equalizer | Custom Kotlin module over `android.media.audiofx` |
+| Catalog | JioSaavn public web API (free, no key) |
+| Media decryption | crypto-js (DES‑ECB, pure JS) |
+| Auth | @react-native-firebase/auth |
+| Cloud DB | Firestore via REST |
+| Local storage | @react-native-async-storage/async-storage |
 | File picker | @react-native-documents/picker |
-| UI | react-native-linear-gradient, @react-native-community/slider, react-native-vector-icons |
+| UI | linear-gradient · slider · vector-icons · Animated |
 
-## 📁 Key files
+---
+
+## 📁 Project structure
 
 ```
 src/
-├── api/jiosaavn.js          # JioSaavn client: trending per language, search, DES stream-url decryption
-├── theme/songTheme.js       # per-song reactive color palette (hash -> HSL)
-├── components/Visualizer.js  # animated equalizer bars
+├── api/jiosaavn.js            # trending per language, search, DES stream-url decryption
+├── firebase/firestoreRest.js  # Firestore REST helper (ID-token auth)
+├── native/Equalizer.js        # JS wrapper for the native EQ + presets
+├── theme/{theme,songTheme}.js # design tokens + per-song reactive palette
 ├── context/{Auth,Library,Uploads,Player}Context.js
-├── screens/{Home,Search,Creator,Library,Player,Profile}Screen.js
+├── player/setupPlayer.js
+├── navigation/RootNavigator.js
+├── screens/{Home,Search,Creator,Library,Player,Equalizer,Profile}Screen.js
 │   └── auth/{Login,Register}Screen.js
-└── components/{MiniPlayer,TrackRow,TrackCard,SectionHeader,Loader}.js
-android/app/src/main/res/
-├── drawable/ic_launcher_{background,foreground}.xml   # adaptive app icon (music note on gradient)
-└── mipmap-anydpi-v26/ic_launcher{,_round}.xml
+├── components/{SplashScreen,FadeIn,MiniPlayer,Visualizer,TrackRow,TrackCard,...}.js
+└── hooks/usePlay.js
+android/app/src/main/java/com/hiresmusic/equalizer/   # native EQ module + package
+service.js                     # RNTP headless service (remote/lock-screen controls)
 ```
 
-## ▶️ Running it
+---
+
+## 🚀 Getting started
+
+**Prerequisites:** Node ≥ 20, JDK 17, Android SDK, an emulator or device.
 
 ```bash
-npm install          # applies the RNTP New-Architecture patch via postinstall
-npm start            # Metro
-npm run android      # build & run on device/emulator
+npm install          # also applies the RNTP New-Arch patch (postinstall)
+npm start            # Metro bundler
+npm run android      # build & install on device/emulator
 ```
 
-Requires Android SDK + JDK 17 and a running emulator/device. JioSaavn requests send a browser `User-Agent` (it 403s otherwise).
+> JioSaavn requests send a browser `User-Agent` (it 403s otherwise) — already handled in `api/jiosaavn.js`.
 
-## 🩹 track-player patch (New Architecture)
+---
 
-`react-native-track-player@4.1.2` predates RN 0.86's mandatory New Architecture. The shipped patch (`patches/react-native-track-player+4.1.2.patch`, auto-applied by `patch-package`) fixes: nullable `Bundle` args, coroutine `Job` return types on async `@ReactMethod`s (must be `void`), and bridgeless event emission via `ReactHost` instead of the dead `reactNativeHost`. See the source comments for details.
+## 🔐 Firebase setup (for cloud login)
 
-## 📝 Notes
+1. Create a Firebase project and add an **Android app** with package `com.hiresmusic`.
+2. Enable **Authentication → Email/Password**.
+3. Create **Firestore Database**.
+4. Download **`google-services.json`** into `android/app/`.
+5. Rebuild. Recommended Firestore security rule:
 
-- Local auth is a **client-only demo**; swap `AuthContext` for a real backend for production.
-- JioSaavn is an **unofficial** API; it's free and reliable but not an official partnership. Creator uploads stay **local to the device**.
+```
+match /users/{uid} {
+  allow read, write: if request.auth != null && request.auth.uid == uid;
+}
+```
+
+Guests work fully offline without any of this.
+
+---
+
+## 🩹 Engineering notes
+
+- **RNTP × New Architecture** — `react-native-track-player@4.1.2` predates RN 0.86's mandatory New Architecture. A shipped patch (`patches/…`, auto‑applied by `patch-package`) fixes nullable `Bundle` args, coroutine `Job` return types on async `@ReactMethod`s, and bridgeless event emission via `ReactHost`.
+- **Firestore over REST** — the native Firestore module's codegen produces file paths beyond Windows' 260‑char limit on deep folders, so favourites use the Firestore REST API (authenticated with the Firebase ID token) instead.
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] Lyrics (synced) on the player
+- [ ] Custom playlists + drag‑to‑reorder queue
+- [ ] Cloud uploads (Firebase Storage) + Google sign‑in
+- [ ] True artwork‑based colors, crossfade, offline downloads
+- [ ] iOS build
+
+---
+
+<div align="center">
+
+Built with ❤️ · Catalog by JioSaavn · Not affiliated with any music label
+
+</div>

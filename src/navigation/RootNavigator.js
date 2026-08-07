@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {View} from 'react-native';
 import {NavigationContainer, DefaultTheme} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
@@ -10,8 +10,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import {colors} from '../theme/theme';
 import {useAuth} from '../context/AuthContext';
-import Loader from '../components/Loader';
 import MiniPlayer from '../components/MiniPlayer';
+import SplashScreen from '../components/SplashScreen';
 
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
@@ -21,6 +21,8 @@ import CreatorScreen from '../screens/CreatorScreen';
 import LibraryScreen from '../screens/LibraryScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import PlayerScreen from '../screens/PlayerScreen';
+import EqualizerScreen from '../screens/EqualizerScreen';
+import AccountSettingsScreen from '../screens/AccountSettingsScreen';
 
 const navTheme = {
   ...DefaultTheme,
@@ -70,6 +72,7 @@ function MainTabs() {
       tabBar={props => <AppTabBar {...props} />}
       screenOptions={({route}) => ({
         headerShown: false,
+        animation: 'shift',
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textFaint,
         tabBarStyle: {
@@ -104,19 +107,27 @@ function AppNavigator() {
         component={PlayerScreen}
         options={{presentation: 'modal', animation: 'slide_from_bottom'}}
       />
+      <RootStack.Screen
+        name="Equalizer"
+        component={EqualizerScreen}
+        options={{presentation: 'modal', animation: 'slide_from_bottom'}}
+      />
+      <RootStack.Screen
+        name="Account"
+        component={AccountSettingsScreen}
+        options={{presentation: 'modal', animation: 'slide_from_bottom'}}
+      />
     </RootStack.Navigator>
   );
 }
 
 export default function RootNavigator() {
   const {user, loading} = useAuth();
+  const [splashDone, setSplashDone] = useState(false);
 
-  if (loading) {
-    return (
-      <View style={{flex: 1, backgroundColor: colors.bg}}>
-        <Loader label="Starting Dhun…" />
-      </View>
-    );
+  // Show the branded splash until its animation finishes AND auth is restored.
+  if (loading || !splashDone) {
+    return <SplashScreen onDone={() => setSplashDone(true)} />;
   }
 
   return (

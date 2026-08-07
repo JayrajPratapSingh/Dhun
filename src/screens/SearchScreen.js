@@ -17,13 +17,15 @@ import TrackRow from '../components/TrackRow';
 
 const SUGGESTIONS = [
   'Arijit Singh',
+  'Anirudh',
   'Sidhu Moose Wala',
   'Diljit Dosanjh',
+  'Sid Sriram',
+  'Devi Sri Prasad',
   'The Weeknd',
   'Pawan Singh',
   'Ajay-Atul',
   'Shreya Ghoshal',
-  'AP Dhillon',
 ];
 
 export default function SearchScreen() {

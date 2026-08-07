@@ -12,12 +12,13 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {colors, radius, spacing, typography} from '../theme/theme';
-import {getTrending, LANGUAGES} from '../api/jiosaavn';
+import {getTrending, LANGUAGES, SOUTH_LANGUAGES} from '../api/jiosaavn';
 import {useAuth} from '../context/AuthContext';
 import {usePlay} from '../hooks/usePlay';
 import TrackCard from '../components/TrackCard';
 import TrackRow from '../components/TrackRow';
 import Loader from '../components/Loader';
+import FadeIn from '../components/FadeIn';
 
 // Vibrant accent per language for the chips + section headers.
 const LANG_COLORS = {
@@ -25,12 +26,18 @@ const LANG_COLORS = {
   hindi: ['#F97316', '#F43F5E'],
   punjabi: ['#F59E0B', '#EAB308'],
   english: ['#3B82F6', '#06B6D4'],
+  tamil: ['#14B8A6', '#0EA5E9'],
+  south: ['#EF4444', '#F59E0B'],
   bhojpuri: ['#10B981', '#84CC16'],
-  marathi: ['#EF4444', '#F97316'],
+  marathi: ['#8B5CF6', '#6366F1'],
+  // section-only keys (used inside South / All)
+  telugu: ['#06B6D4', '#3B82F6'],
+  kannada: ['#F43F5E', '#EC4899'],
+  malayalam: ['#22C55E', '#10B981'],
 };
 
 // Languages shown as sections when "All" is selected.
-const ALL_SECTIONS = ['hindi', 'punjabi', 'english', 'bhojpuri', 'marathi'];
+const ALL_SECTIONS = ['hindi', 'punjabi', 'tamil', 'english', 'bhojpuri', 'marathi'];
 
 export default function HomeScreen({navigation}) {
   const insets = useSafeAreaInsets();
@@ -43,10 +50,18 @@ export default function HomeScreen({navigation}) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
+  // Which language sections to fetch for the selected chip.
+  const sectionsFor = selected =>
+    selected === 'all'
+      ? ALL_SECTIONS
+      : selected === 'south'
+      ? SOUTH_LANGUAGES
+      : [selected];
+
   const load = useCallback(async selected => {
     setError('');
     try {
-      const langs = selected === 'all' ? ALL_SECTIONS : [selected];
+      const langs = sectionsFor(selected);
       const results = await Promise.all(langs.map(l => getTrending(l, {limit: 20})));
       const next = {};
       langs.forEach((l, i) => (next[l] = results[i]));
@@ -71,8 +86,10 @@ export default function HomeScreen({navigation}) {
     return 'Good evening';
   };
 
-  const labelFor = key => LANGUAGES.find(l => l.key === key)?.label || key;
-  const sectionKeys = lang === 'all' ? ALL_SECTIONS : [lang];
+  const labelFor = key =>
+    LANGUAGES.find(l => l.key === key)?.label ||
+    key.charAt(0).toUpperCase() + key.slice(1);
+  const sectionKeys = sectionsFor(lang);
 
   return (
     <View style={styles.flex}>
@@ -140,7 +157,7 @@ export default function HomeScreen({navigation}) {
             if (!list.length) return null;
             const grad = LANG_COLORS[key] || ['#8B5CF6', '#EC4899'];
             return (
-              <View key={key} style={styles.section}>
+              <FadeIn key={key} delay={si * 90} style={styles.section}>
                 <View style={styles.sectionHead}>
                   <View style={[styles.dot, {backgroundColor: grad[0]}]} />
                   <Text style={styles.sectionTitle}>
@@ -177,7 +194,7 @@ export default function HomeScreen({navigation}) {
                     ))}
                   </View>
                 )}
-              </View>
+              </FadeIn>
             );
           })}
         </ScrollView>

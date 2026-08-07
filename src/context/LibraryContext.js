@@ -1,38 +1,54 @@
 // Per-user library: liked/favorite tracks + recently played.
-// Stored in AsyncStorage under a key namespaced by the current user id, so a
-// logged-in user and a guest keep separate libraries on the same device.
+// - Signed-in users: stored in Firestore via its REST API (synced across
+//   devices; loaded on sign-in, written on every change).
+// - Guests: stored locally in AsyncStorage (device only).
 import React, {
   createContext,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {loadUserData, saveUserData} from '../firebase/firestoreRest';
 import {useAuth} from './AuthContext';
 
 const LibraryContext = createContext(null);
-
 const keyFor = uid => `@hrm_library_${uid || 'anon'}`;
 
 export function LibraryProvider({children}) {
-  const {user} = useAuth();
-  const uid = user?.id || 'anon';
+  const {user, isAuthed} = useAuth();
+  const uid = user?.id || 'guest';
   const [favorites, setFavorites] = useState([]);
   const [recent, setRecent] = useState([]);
   const [ready, setReady] = useState(false);
+  // Latest values, to compute writes without stale closures.
+  const favRef = useRef([]);
+  const recentRef = useRef([]);
+  favRef.current = favorites;
+  recentRef.current = recent;
 
-  // Load this user's library whenever the active user changes.
   useEffect(() => {
     let alive = true;
+    setReady(false);
     (async () => {
-      setReady(false);
       try {
-        const raw = await AsyncStorage.getItem(keyFor(uid));
-        const data = raw ? JSON.parse(raw) : {favorites: [], recent: []};
+        let data;
+        if (isAuthed && user?.id) {
+          data = await loadUserData(user.id); // Firestore REST
+        } else {
+          const raw = await AsyncStorage.getItem(keyFor(uid));
+          data = raw ? JSON.parse(raw) : {favorites: [], recent: []};
+        }
         if (alive) {
           setFavorites(data.favorites || []);
           setRecent(data.recent || []);
+        }
+      } catch (e) {
+        if (alive) {
+          setFavorites([]);
+          setRecent([]);
         }
       } finally {
         if (alive) setReady(true);
@@ -41,13 +57,20 @@ export function LibraryProvider({children}) {
     return () => {
       alive = false;
     };
-  }, [uid]);
+  }, [uid, isAuthed, user?.id]);
 
-  async function persist(nextFav, nextRecent) {
-    await AsyncStorage.setItem(
-      keyFor(uid),
-      JSON.stringify({favorites: nextFav, recent: nextRecent}),
-    );
+  // Persist to the right backend for the current user.
+  function persist(nextFav, nextRecent) {
+    if (isAuthed && user?.id) {
+      saveUserData(user.id, {favorites: nextFav, recent: nextRecent}).catch(
+        () => {},
+      );
+    } else {
+      AsyncStorage.setItem(
+        keyFor(uid),
+        JSON.stringify({favorites: nextFav, recent: nextRecent}),
+      ).catch(() => {});
+    }
   }
 
   function isFavorite(id) {
@@ -55,36 +78,25 @@ export function LibraryProvider({children}) {
   }
 
   function toggleFavorite(track) {
-    setFavorites(prev => {
-      const exists = prev.some(t => String(t.id) === String(track.id));
-      const next = exists
-        ? prev.filter(t => String(t.id) !== String(track.id))
-        : [track, ...prev];
-      persist(next, recent);
-      return next;
-    });
+    const exists = favRef.current.some(t => String(t.id) === String(track.id));
+    const next = exists
+      ? favRef.current.filter(t => String(t.id) !== String(track.id))
+      : [track, ...favRef.current];
+    setFavorites(next);
+    persist(next, recentRef.current);
   }
 
   function addRecent(track) {
-    setRecent(prev => {
-      const next = [
-        track,
-        ...prev.filter(t => String(t.id) !== String(track.id)),
-      ].slice(0, 30);
-      persist(favorites, next);
-      return next;
-    });
+    const next = [
+      track,
+      ...recentRef.current.filter(t => String(t.id) !== String(track.id)),
+    ].slice(0, 30);
+    setRecent(next);
+    persist(favRef.current, next);
   }
 
   const value = useMemo(
-    () => ({
-      favorites,
-      recent,
-      ready,
-      isFavorite,
-      toggleFavorite,
-      addRecent,
-    }),
+    () => ({favorites, recent, ready, isFavorite, toggleFavorite, addRecent}),
     [favorites, recent, ready],
   );
 

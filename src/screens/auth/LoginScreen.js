@@ -14,6 +14,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {colors, radius, spacing, typography} from '../../theme/theme';
 import {useAuth} from '../../context/AuthContext';
+import FadeIn from '../../components/FadeIn';
 
 export default function LoginScreen({navigation}) {
   const {login, continueAsGuest} = useAuth();
@@ -41,7 +42,7 @@ export default function LoginScreen({navigation}) {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <View style={styles.logoWrap}>
+          <FadeIn style={styles.logoWrap} offset={20}>
             <LinearGradient
               colors={['#8B5CF6', '#EC4899']}
               start={{x: 0, y: 0}}
@@ -50,8 +51,8 @@ export default function LoginScreen({navigation}) {
               <Ionicons name="musical-notes" size={34} color={colors.text} />
             </LinearGradient>
             <Text style={styles.brand}>Dhun</Text>
-            <Text style={styles.tagline}>Hindi · English · Punjabi · Bhojpuri · Marathi</Text>
-          </View>
+            <Text style={styles.tagline}>Hindi · Punjabi · English · Tamil · & more</Text>
+          </FadeIn>
 
           <Text style={typography.h1}>Welcome back</Text>
           <Text style={styles.sub}>Sign in to sync your likes and library.</Text>

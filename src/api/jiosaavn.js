@@ -17,9 +17,14 @@ export const LANGUAGES = [
   {key: 'hindi', label: 'Hindi', emoji: '🇮🇳'},
   {key: 'punjabi', label: 'Punjabi', emoji: '🎶'},
   {key: 'english', label: 'English', emoji: '🎧'},
+  {key: 'tamil', label: 'Tamil', emoji: '🎬'},
+  {key: 'south', label: 'South', emoji: '🌴'},
   {key: 'bhojpuri', label: 'Bhojpuri', emoji: '🪕'},
   {key: 'marathi', label: 'Marathi', emoji: '🥁'},
 ];
+
+// "South" is an aggregate chip that pulls trending across South-Indian languages.
+export const SOUTH_LANGUAGES = ['telugu', 'tamil', 'kannada', 'malayalam'];
 
 async function call(params) {
   const res = await fetch(`${BASE}?${params}${COMMON}`, {

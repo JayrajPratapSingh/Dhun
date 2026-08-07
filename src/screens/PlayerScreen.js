@@ -1,5 +1,5 @@
-import React from 'react';
-import {Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import React, {useState} from 'react';
+import {Image, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Slider from '@react-native-community/slider';
@@ -9,12 +9,34 @@ import {usePlayer} from '../context/PlayerContext';
 import {useLibrary} from '../context/LibraryContext';
 import {formatDuration} from '../utils/format';
 import Visualizer from '../components/Visualizer';
+import FadeIn from '../components/FadeIn';
 
 export default function PlayerScreen({navigation}) {
   const insets = useSafeAreaInsets();
-  const {current, theme, isPlaying, isBuffering, progress, togglePlay, next, prev, seekTo} =
-    usePlayer();
+  const {
+    current,
+    theme,
+    isPlaying,
+    isBuffering,
+    progress,
+    togglePlay,
+    next,
+    prev,
+    seekTo,
+    repeatMode,
+    cycleRepeat,
+    shuffle,
+    rate,
+    setRate,
+    sleepMinutes,
+    setSleep,
+    RepeatMode,
+  } = usePlayer();
   const {isFavorite, toggleFavorite} = useLibrary();
+  const [showSleep, setShowSleep] = useState(false);
+  const [showSpeed, setShowSpeed] = useState(false);
+  const accent = theme.primary;
+  const repeatOn = repeatMode !== RepeatMode.Off;
 
   if (!current) {
     return (
@@ -40,7 +62,7 @@ export default function PlayerScreen({navigation}) {
         <View style={{width: 28}} />
       </View>
 
-      <View style={styles.artworkWrap}>
+      <FadeIn style={styles.artworkWrap} offset={22} duration={500}>
         {current.artworkLarge || current.artwork ? (
           <Image
             source={{uri: current.artworkLarge || current.artwork}}
@@ -51,7 +73,7 @@ export default function PlayerScreen({navigation}) {
             <Ionicons name="musical-notes" size={80} color={colors.textFaint} />
           </View>
         )}
-      </View>
+      </FadeIn>
 
       {/* Visualizer reacts to the song's color + playing state */}
       <View style={styles.vizWrap}>
@@ -96,40 +118,147 @@ export default function PlayerScreen({navigation}) {
       </View>
 
       <View style={styles.controls}>
+        <TouchableOpacity onPress={shuffle} hitSlop={10}>
+          <Ionicons name="shuffle" size={24} color={colors.text} />
+        </TouchableOpacity>
+
         <TouchableOpacity onPress={prev} hitSlop={10}>
-          <Ionicons name="play-skip-back" size={34} color={colors.text} />
+          <Ionicons name="play-skip-back" size={32} color={colors.text} />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.playBtn, {backgroundColor: theme.primary, shadowColor: theme.primary}]}
+          style={[styles.playBtn, {backgroundColor: accent, shadowColor: accent}]}
           onPress={togglePlay}>
           <Ionicons
             name={isBuffering ? 'hourglass-outline' : isPlaying ? 'pause' : 'play'}
-            size={38}
+            size={36}
             color="#000"
             style={!isPlaying && !isBuffering ? {marginLeft: 3} : undefined}
           />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={next} hitSlop={10}>
-          <Ionicons name="play-skip-forward" size={34} color={colors.text} />
+          <Ionicons name="play-skip-forward" size={32} color={colors.text} />
         </TouchableOpacity>
+
+        <TouchableOpacity onPress={cycleRepeat} hitSlop={10}>
+          <View>
+            <Ionicons name="repeat" size={24} color={repeatOn ? accent : colors.text} />
+            {repeatMode === RepeatMode.Track && (
+              <View style={[styles.repeatOne, {backgroundColor: accent}]}>
+                <Text style={styles.repeatOneText}>1</Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* Utility row: equalizer, sleep timer, speed */}
+      <View style={styles.utilRow}>
+        <UtilButton
+          icon="options"
+          label="Equalizer"
+          accent={accent}
+          onPress={() => navigation.navigate('Equalizer')}
+        />
+        <UtilButton
+          icon="moon"
+          label={sleepMinutes ? `${sleepMinutes} min` : 'Sleep'}
+          active={!!sleepMinutes}
+          accent={accent}
+          onPress={() => setShowSleep(true)}
+        />
+        <UtilButton
+          icon="speedometer"
+          label={`${rate}x`}
+          active={rate !== 1}
+          accent={accent}
+          onPress={() => setShowSpeed(true)}
+        />
       </View>
 
       <View style={styles.quality}>
         <View style={[styles.qBadge, {backgroundColor: theme.soft}]}>
-          <Ionicons name="pulse" size={14} color={theme.primary} />
-          <Text style={[styles.qualityText, {color: theme.primary}]}>320 kbps</Text>
+          <Ionicons name="pulse" size={14} color={accent} />
+          <Text style={[styles.qualityText, {color: accent}]}>320 kbps</Text>
         </View>
         {!!current.language && (
           <View style={[styles.qBadge, {backgroundColor: theme.soft}]}>
-            <Text style={[styles.qualityText, {color: theme.primary}]}>
+            <Text style={[styles.qualityText, {color: accent}]}>
               {current.language[0].toUpperCase() + current.language.slice(1)}
             </Text>
           </View>
         )}
       </View>
+
+      <PickerModal
+        visible={showSleep}
+        title="Sleep timer"
+        accent={accent}
+        onClose={() => setShowSleep(false)}
+        options={[
+          {label: 'Off', value: null},
+          {label: '10 minutes', value: 10},
+          {label: '15 minutes', value: 15},
+          {label: '30 minutes', value: 30},
+          {label: '45 minutes', value: 45},
+          {label: '60 minutes', value: 60},
+        ]}
+        selected={sleepMinutes}
+        onSelect={v => {
+          setSleep(v);
+          setShowSleep(false);
+        }}
+      />
+
+      <PickerModal
+        visible={showSpeed}
+        title="Playback speed"
+        accent={accent}
+        onClose={() => setShowSpeed(false)}
+        options={[0.5, 0.75, 1, 1.25, 1.5, 2].map(v => ({label: `${v}x`, value: v}))}
+        selected={rate}
+        onSelect={v => {
+          setRate(v);
+          setShowSpeed(false);
+        }}
+      />
     </LinearGradient>
+  );
+}
+
+function UtilButton({icon, label, onPress, accent, active}) {
+  return (
+    <TouchableOpacity style={styles.utilBtn} onPress={onPress}>
+      <Ionicons name={icon} size={20} color={active ? accent : colors.textMuted} />
+      <Text style={[styles.utilLabel, active && {color: accent}]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function PickerModal({visible, title, options, selected, onSelect, onClose, accent}) {
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.modalBackdrop} onPress={onClose}>
+        <Pressable style={styles.sheet}>
+          <Text style={styles.sheetTitle}>{title}</Text>
+          {options.map(opt => {
+            const isSel = selected === opt.value;
+            return (
+              <TouchableOpacity
+                key={String(opt.value)}
+                style={styles.sheetRow}
+                onPress={() => onSelect(opt.value)}>
+                <Text style={[styles.sheetLabel, isSel && {color: accent, fontWeight: '800'}]}>
+                  {opt.label}
+                </Text>
+                {isSel && <Ionicons name="checkmark" size={20} color={accent} />}
+              </TouchableOpacity>
+            );
+          })}
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -175,10 +304,48 @@ const styles = StyleSheet.create({
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-evenly',
+    justifyContent: 'space-between',
     marginTop: spacing.lg,
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: spacing.xl,
   },
+  repeatOne: {
+    position: 'absolute',
+    top: -4,
+    right: -6,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  repeatOneText: {color: '#000', fontSize: 9, fontWeight: '900'},
+  utilRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.lg,
+  },
+  utilBtn: {alignItems: 'center', paddingVertical: spacing.sm, minWidth: 84},
+  utilLabel: {color: colors.textMuted, fontSize: 12, marginTop: 4, fontWeight: '600'},
+  modalBackdrop: {flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end'},
+  sheet: {
+    backgroundColor: colors.bgElevated,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxl,
+  },
+  sheetTitle: {...typography.h3, marginBottom: spacing.md},
+  sheetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  sheetLabel: {color: colors.text, fontSize: 16},
   playBtn: {
     width: 74,
     height: 74,
@@ -195,7 +362,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    marginTop: spacing.xl,
+    marginTop: spacing.lg,
   },
   qBadge: {
     flexDirection: 'row',
