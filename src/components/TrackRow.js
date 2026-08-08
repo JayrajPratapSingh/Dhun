@@ -1,5 +1,6 @@
 import React from 'react';
 import {Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {colors, radius, spacing} from '../theme/theme';
 import {formatDuration} from '../utils/format';
@@ -8,6 +9,7 @@ import {useLibrary} from '../context/LibraryContext';
 // A single track list row with artwork, title/artist, like toggle & duration.
 export default function TrackRow({track, index, onPress, active = false}) {
   const {isFavorite, toggleFavorite} = useLibrary();
+  const navigation = useNavigation();
   const liked = isFavorite(track.id);
 
   return (
@@ -34,6 +36,12 @@ export default function TrackRow({track, index, onPress, active = false}) {
         </Text>
       </View>
       <Text style={styles.dur}>{formatDuration(track.duration)}</Text>
+      <TouchableOpacity
+        onPress={() => navigation.navigate('AddToPlaylist', {track})}
+        hitSlop={8}
+        style={styles.likeBtn}>
+        <Ionicons name="add" size={22} color={colors.textFaint} />
+      </TouchableOpacity>
       <TouchableOpacity
         onPress={() => toggleFavorite(track)}
         hitSlop={10}

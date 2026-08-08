@@ -1,16 +1,30 @@
-import React from 'react';
-import {ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import React, {useState} from 'react';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {colors, radius, spacing, typography} from '../theme/theme';
 import {useAuth} from '../context/AuthContext';
 import {useLibrary} from '../context/LibraryContext';
+import {useI18n} from '../i18n/LanguageContext';
+import {APP_LANGUAGES} from '../i18n/translations';
 import {initials} from '../utils/format';
 
 export default function ProfileScreen({navigation}) {
   const insets = useSafeAreaInsets();
   const {user, isGuest, logout} = useAuth();
   const {favorites, recent} = useLibrary();
+  const {t, lang, setLang} = useI18n();
+  const [showLang, setShowLang] = useState(false);
+  const currentLangLabel =
+    APP_LANGUAGES.find(l => l.key === lang)?.label || 'English';
 
   return (
     <ScrollView
@@ -20,51 +34,80 @@ export default function ProfileScreen({navigation}) {
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{isGuest ? 'G' : initials(user?.name || '?')}</Text>
         </View>
-        <Text style={styles.name}>{user?.name || 'Guest'}</Text>
+        <Text style={styles.name}>{isGuest ? t('guest') : user?.name || t('guest')}</Text>
         {!isGuest && !!user?.email && <Text style={styles.email}>{user.email}</Text>}
-        {isGuest && <Text style={styles.email}>Browsing without an account</Text>}
+        {isGuest && <Text style={styles.email}>{t('browsing_guest')}</Text>}
       </View>
 
       <View style={styles.stats}>
-        <Stat label="Liked" value={favorites.length} icon="heart" />
+        <Stat label={t('liked')} value={favorites.length} icon="heart" />
         <View style={styles.divider} />
-        <Stat label="Recent" value={recent.length} icon="time" />
+        <Stat label={t('recent')} value={recent.length} icon="time" />
         <View style={styles.divider} />
-        <Stat label="Quality" value="HiRes" icon="pulse" />
+        <Stat label={t('streaming_quality')} value="320" icon="pulse" />
       </View>
 
       <View style={styles.menu}>
         {!isGuest && (
           <MenuItem
             icon="person-circle-outline"
-            label="Account settings"
+            label={t('account_settings')}
             onPress={() => navigation.navigate('Account')}
           />
         )}
         <MenuItem
+          icon="language-outline"
+          label={t('app_language')}
+          trailing={currentLangLabel}
+          onPress={() => setShowLang(true)}
+        />
+        <MenuItem
           icon="options-outline"
-          label="Equalizer"
+          label={t('equalizer')}
           onPress={() => navigation.navigate('Equalizer')}
         />
-        <MenuItem icon="notifications-outline" label="Notifications" />
-        <MenuItem icon="cloud-download-outline" label="Audio & downloads" />
-        <MenuItem icon="pulse-outline" label="Streaming quality" trailing="320 kbps" />
-        <MenuItem icon="information-circle-outline" label="About Dhun" />
+        <MenuItem icon="notifications-outline" label={t('notifications')} />
+        <MenuItem icon="cloud-download-outline" label={t('audio_downloads')} />
+        <MenuItem icon="pulse-outline" label={t('streaming_quality')} trailing="320 kbps" />
+        <MenuItem icon="information-circle-outline" label={t('about')} />
       </View>
 
       {isGuest ? (
         <TouchableOpacity style={styles.signInBtn} onPress={logout}>
           <Ionicons name="log-in-outline" size={20} color="#000" />
-          <Text style={styles.signInText}>Sign in / Create account</Text>
+          <Text style={styles.signInText}>{t('sign_in_create')}</Text>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
           <Ionicons name="log-out-outline" size={20} color={colors.danger} />
-          <Text style={styles.logoutText}>Log out</Text>
+          <Text style={styles.logoutText}>{t('log_out')}</Text>
         </TouchableOpacity>
       )}
 
       <Text style={styles.version}>Dhun • Powered by JioSaavn • v1.0.0</Text>
+
+      {/* Language picker */}
+      <Modal visible={showLang} transparent animationType="slide" onRequestClose={() => setShowLang(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setShowLang(false)}>
+          <Pressable style={styles.sheet}>
+            <Text style={styles.sheetTitle}>{t('app_language')}</Text>
+            {APP_LANGUAGES.map(l => (
+              <TouchableOpacity
+                key={l.key}
+                style={styles.langRow}
+                onPress={() => {
+                  setLang(l.key);
+                  setShowLang(false);
+                }}>
+                <Text style={[styles.langLabel, lang === l.key && {color: colors.primary, fontWeight: '800'}]}>
+                  {l.label}
+                </Text>
+                {lang === l.key && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }
@@ -151,4 +194,22 @@ const styles = StyleSheet.create({
   },
   logoutText: {color: colors.danger, fontWeight: '700', fontSize: 15, marginLeft: 6},
   version: {color: colors.textFaint, textAlign: 'center', marginTop: spacing.xl, fontSize: 12},
+  backdrop: {flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end'},
+  sheet: {
+    backgroundColor: colors.bgElevated,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    padding: spacing.xl,
+    paddingBottom: spacing.xxl,
+  },
+  sheetTitle: {...typography.h3, marginBottom: spacing.md},
+  langRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  langLabel: {color: colors.text, fontSize: 16},
 });

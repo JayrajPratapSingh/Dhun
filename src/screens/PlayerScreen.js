@@ -1,5 +1,15 @@
-import React, {useState} from 'react';
-import {Image, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import React, {useEffect, useRef, useState} from 'react';
+import {
+  Animated,
+  Easing,
+  Image,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Slider from '@react-native-community/slider';
@@ -7,6 +17,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import {colors, radius, spacing, typography} from '../theme/theme';
 import {usePlayer} from '../context/PlayerContext';
 import {useLibrary} from '../context/LibraryContext';
+import {useDownloads} from '../context/DownloadsContext';
+import {useI18n} from '../i18n/LanguageContext';
 import {formatDuration} from '../utils/format';
 import Visualizer from '../components/Visualizer';
 import FadeIn from '../components/FadeIn';
@@ -33,10 +45,41 @@ export default function PlayerScreen({navigation}) {
     RepeatMode,
   } = usePlayer();
   const {isFavorite, toggleFavorite} = useLibrary();
+  const {isDownloaded, isDownloading, progress: dlProgress, downloadTrack, removeDownload} =
+    useDownloads();
+  const {t} = useI18n();
   const [showSleep, setShowSleep] = useState(false);
   const [showSpeed, setShowSpeed] = useState(false);
   const accent = theme.primary;
+
+  // Slow "Ken Burns" zoom/pan for the blurred artwork background.
+  const kb = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(kb, {
+          toValue: 1,
+          duration: 14000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(kb, {
+          toValue: 0,
+          duration: 14000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [kb]);
+  const kbScale = kb.interpolate({inputRange: [0, 1], outputRange: [1.15, 1.35]});
+  const kbTranslate = kb.interpolate({inputRange: [0, 1], outputRange: [-16, 16]});
   const repeatOn = repeatMode !== RepeatMode.Off;
+  const downloaded = current ? isDownloaded(current.id) : false;
+  const downloading = current ? isDownloading(current.id) : false;
+  const dlPct = current ? Math.round((dlProgress[current.id] || 0) * 100) : 0;
 
   if (!current) {
     return (
@@ -52,13 +95,37 @@ export default function PlayerScreen({navigation}) {
 
   const liked = isFavorite(current.id);
 
+  const artUri = current.artworkLarge || current.artwork;
+
   return (
-    <LinearGradient colors={theme.gradient} style={styles.flex}>
+    <View style={styles.flex}>
+      {/* Animated blurred-artwork background */}
+      {artUri ? (
+        <Animated.Image
+          source={{uri: artUri}}
+          blurRadius={30}
+          style={[
+            StyleSheet.absoluteFillObject,
+            {transform: [{scale: kbScale}, {translateX: kbTranslate}, {translateY: kbTranslate}]},
+          ]}
+          resizeMode="cover"
+        />
+      ) : null}
+      {/* Readability overlay tinted by the song color */}
+      <LinearGradient
+        colors={
+          artUri
+            ? ['rgba(0,0,0,0.35)', theme.gradient[1] + 'cc', 'rgba(11,11,15,0.97)']
+            : theme.gradient
+        }
+        style={StyleSheet.absoluteFillObject}
+      />
+
       <View style={[styles.header, {paddingTop: insets.top + spacing.sm}]}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10}>
           <Ionicons name="chevron-down" size={28} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Now Playing</Text>
+        <Text style={styles.headerTitle}>{t('now_playing')}</Text>
         <View style={{width: 28}} />
       </View>
 
@@ -95,6 +162,45 @@ export default function PlayerScreen({navigation}) {
             size={30}
             color={liked ? theme.primary : colors.text}
           />
+        </TouchableOpacity>
+      </View>
+
+      {/* Contextual actions: lyrics, add to playlist, queue */}
+      <View style={styles.actionRow}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('Lyrics')}>
+          <Ionicons name="document-text-outline" size={20} color={colors.textMuted} />
+          <Text style={styles.actionLabel}>{t('lyrics')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={() => navigation.navigate('AddToPlaylist', {track: current})}>
+          <Ionicons name="add-circle-outline" size={20} color={colors.textMuted} />
+          <Text style={styles.actionLabel}>{t('playlist')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('Queue')}>
+          <Ionicons name="list-outline" size={20} color={colors.textMuted} />
+          <Text style={styles.actionLabel}>{t('queue')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={() =>
+            downloaded ? removeDownload(current.id) : downloadTrack(current)
+          }
+          disabled={downloading}>
+          <Ionicons
+            name={
+              downloaded
+                ? 'checkmark-circle'
+                : downloading
+                ? 'cloud-download'
+                : 'download-outline'
+            }
+            size={20}
+            color={downloaded ? accent : colors.textMuted}
+          />
+          <Text style={[styles.actionLabel, downloaded && {color: accent}]}>
+            {downloaded ? t('saved') : downloading ? `${dlPct}%` : t('download')}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -223,7 +329,7 @@ export default function PlayerScreen({navigation}) {
           setShowSpeed(false);
         }}
       />
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -297,6 +403,14 @@ const styles = StyleSheet.create({
   },
   title: {...typography.h2, fontSize: 23},
   artist: {color: colors.textMuted, fontSize: 15, marginTop: 4},
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.xl,
+    marginTop: spacing.md,
+  },
+  actionBtn: {flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: spacing.sm},
+  actionLabel: {color: colors.textMuted, fontSize: 12, fontWeight: '600', marginLeft: 4},
   seekWrap: {paddingHorizontal: spacing.lg, marginTop: spacing.md},
   slider: {width: '100%', height: 40},
   timeRow: {flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.xs},
@@ -359,10 +473,12 @@ const styles = StyleSheet.create({
   },
   quality: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
     marginTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
   },
   qBadge: {
     flexDirection: 'row',
@@ -372,6 +488,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: radius.pill,
     marginHorizontal: 4,
+    marginVertical: 3,
   },
   qualityText: {fontSize: 12, fontWeight: '700', marginLeft: 4},
 });

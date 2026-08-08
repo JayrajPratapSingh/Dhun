@@ -127,6 +127,59 @@ export async function searchSongs(query, {limit = 40} = {}) {
   return list.map(normalizeSong).filter(Boolean);
 }
 
+// Normalize a JioSaavn album (movie soundtrack) object for the UI.
+export function normalizeAlbum(a) {
+  if (!a) return null;
+  return {
+    id: a.id,
+    title: decodeEntities(a.title),
+    subtitle: decodeEntities(a.subtitle || a.more_info?.music || ''),
+    image: hqImage(a.image),
+    year: a.year || '',
+    language: a.language || '',
+    songCount: parseInt(a.more_info?.song_count || 0, 10) || 0,
+    type: 'album',
+  };
+}
+
+// Search albums / movie soundtracks by name.
+export async function searchAlbums(query, {limit = 15} = {}) {
+  if (!query?.trim()) return [];
+  const data = await call(
+    `__call=search.getAlbumResults&q=${encodeURIComponent(query)}&n=${limit}&p=1`,
+  );
+  const list = data?.results || [];
+  return list.map(normalizeAlbum).filter(Boolean);
+}
+
+// Get all songs of an album (movie), normalized + ready to play.
+export async function getAlbumSongs(albumId) {
+  const data = await call(`__call=content.getAlbumDetails&albumid=${encodeURIComponent(albumId)}`);
+  const songs = data?.songs || data?.list || data?.more_info?.songs || [];
+  return {
+    title: decodeEntities(data?.title || ''),
+    image: hqImage(data?.image || ''),
+    year: data?.year || '',
+    songs: songs.map(normalizeSong).filter(Boolean),
+  };
+}
+
+// Fetch plain-text lyrics for a song id, or null if unavailable.
+export async function getLyrics(id) {
+  if (!id) return null;
+  try {
+    const data = await call(`__call=lyrics.getLyrics&lyrics_id=${encodeURIComponent(id)}`);
+    const raw = data?.lyrics;
+    if (!raw) return null;
+    return raw
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .trim();
+  } catch (e) {
+    return null;
+  }
+}
+
 // Fallback: resolve a stream URL for a song id if it wasn't decrypted eagerly.
 export async function getStreamUrl(id) {
   const data = await call(`__call=song.getDetails&pids=${encodeURIComponent(id)}`);

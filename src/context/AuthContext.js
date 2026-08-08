@@ -12,12 +12,20 @@ import {
   updateProfile,
   deleteUser,
   sendPasswordResetEmail,
+  GoogleAuthProvider,
+  signInWithCredential,
 } from '@react-native-firebase/auth';
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {
   saveUserData,
   setDeactivated,
   deleteUserDoc,
 } from '../firebase/firestoreRest';
+import {WEB_CLIENT_ID} from '../config/google';
+
+if (WEB_CLIENT_ID) {
+  GoogleSignin.configure({webClientId: WEB_CLIENT_ID});
+}
 
 const GUEST_KEY = '@hrm_guest';
 const AuthContext = createContext(null);
@@ -154,6 +162,23 @@ export function AuthProvider({children}) {
     }
   }
 
+  async function signInWithGoogle() {
+    if (!WEB_CLIENT_ID) {
+      throw new Error(
+        'Google Sign-In isn’t set up yet. Add the SHA-1 in Firebase and paste the web client ID.',
+      );
+    }
+    await AsyncStorage.removeItem(GUEST_KEY);
+    await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
+    const result = await GoogleSignin.signIn();
+    const idToken = result?.data?.idToken || result?.idToken;
+    if (!idToken) throw new Error('Could not get Google credentials');
+    const credential = GoogleAuthProvider.credential(idToken);
+    const cred = await signInWithCredential(authInstance, credential);
+    setDeactivated(cred.user.uid, false).catch(() => {});
+    // onAuthStateChanged will set the user.
+  }
+
   async function continueAsGuest() {
     await AsyncStorage.setItem(GUEST_KEY, '1');
     setUser({id: 'guest', name: 'Guest', guest: true});
@@ -175,6 +200,7 @@ export function AuthProvider({children}) {
       isAuthed: !!user && !user.guest,
       register,
       login,
+      signInWithGoogle,
       continueAsGuest,
       logout,
       updateName,

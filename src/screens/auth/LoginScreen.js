@@ -1,6 +1,7 @@
 import React, {useState} from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,10 +15,24 @@ import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {colors, radius, spacing, typography} from '../../theme/theme';
 import {useAuth} from '../../context/AuthContext';
+import {useI18n} from '../../i18n/LanguageContext';
 import FadeIn from '../../components/FadeIn';
 
 export default function LoginScreen({navigation}) {
-  const {login, continueAsGuest} = useAuth();
+  const {login, signInWithGoogle, continueAsGuest} = useAuth();
+  const {t} = useI18n();
+
+  async function onGoogle() {
+    setError('');
+    setBusy(true);
+    try {
+      await signInWithGoogle();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -43,19 +58,17 @@ export default function LoginScreen({navigation}) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <FadeIn style={styles.logoWrap} offset={20}>
-            <LinearGradient
-              colors={['#8B5CF6', '#EC4899']}
-              start={{x: 0, y: 0}}
-              end={{x: 1, y: 1}}
-              style={styles.logo}>
-              <Ionicons name="musical-notes" size={34} color={colors.text} />
-            </LinearGradient>
+            <Image
+              source={require('../../../assets/logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={styles.brand}>Dhun</Text>
             <Text style={styles.tagline}>Hindi · Punjabi · English · Tamil · & more</Text>
           </FadeIn>
 
-          <Text style={typography.h1}>Welcome back</Text>
-          <Text style={styles.sub}>Sign in to sync your likes and library.</Text>
+          <Text style={typography.h1}>{t('welcome_back')}</Text>
+          <Text style={styles.sub}>{t('sign_in_sub')}</Text>
 
           {!!error && (
             <View style={styles.errorBox}>
@@ -66,7 +79,7 @@ export default function LoginScreen({navigation}) {
 
           <Field
             icon="mail-outline"
-            placeholder="Email"
+            placeholder={t('email')}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -74,7 +87,7 @@ export default function LoginScreen({navigation}) {
           />
           <Field
             icon="lock-closed-outline"
-            placeholder="Password"
+            placeholder={t('password')}
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPass}
@@ -86,18 +99,29 @@ export default function LoginScreen({navigation}) {
             {busy ? (
               <ActivityIndicator color="#000" />
             ) : (
-              <Text style={styles.primaryText}>Sign In</Text>
+              <Text style={styles.primaryText}>{t('sign_in')}</Text>
             )}
           </TouchableOpacity>
 
+          <View style={styles.dividerRow}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>{t('or')}</Text>
+            <View style={styles.divider} />
+          </View>
+
+          <TouchableOpacity style={styles.googleBtn} onPress={onGoogle} disabled={busy}>
+            <Ionicons name="logo-google" size={20} color={colors.text} />
+            <Text style={styles.googleText}>{t('continue_google')}</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.guestBtn} onPress={continueAsGuest} disabled={busy}>
-            <Text style={styles.guestText}>Continue without login</Text>
+            <Text style={styles.guestText}>{t('continue_guest')}</Text>
           </TouchableOpacity>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>New here? </Text>
+            <Text style={styles.footerText}>{t('new_here')} </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.link}>Create an account</Text>
+              <Text style={styles.link}>{t('create_an_account')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -130,12 +154,9 @@ const styles = StyleSheet.create({
   container: {padding: spacing.xl, paddingTop: spacing.xxl * 2, flexGrow: 1},
   logoWrap: {alignItems: 'center', marginBottom: spacing.xxl},
   logo: {
-    width: 76,
-    height: 76,
-    borderRadius: radius.xl,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 92,
+    height: 92,
+    borderRadius: radius.lg,
   },
   brand: {...typography.h2, marginTop: spacing.md},
   tagline: {color: colors.textMuted, marginTop: spacing.xs},
@@ -161,6 +182,21 @@ const styles = StyleSheet.create({
   primaryText: {color: '#000', fontWeight: '800', fontSize: 16},
   guestBtn: {alignItems: 'center', paddingVertical: 14, marginTop: spacing.sm},
   guestText: {color: colors.text, fontWeight: '600', fontSize: 15},
+  dividerRow: {flexDirection: 'row', alignItems: 'center', marginTop: spacing.lg, gap: spacing.md},
+  divider: {flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.border},
+  dividerText: {color: colors.textFaint, marginHorizontal: spacing.md, fontSize: 12},
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingVertical: 14,
+    marginTop: spacing.lg,
+  },
+  googleText: {color: colors.text, fontWeight: '700', fontSize: 15, marginLeft: spacing.sm},
   footer: {flexDirection: 'row', justifyContent: 'center', marginTop: spacing.xl},
   footerText: {color: colors.textMuted},
   link: {color: colors.primary, fontWeight: '700'},

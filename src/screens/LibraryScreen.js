@@ -1,30 +1,60 @@
 import React, {useState} from 'react';
-import {FlatList, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {
+  FlatList,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {colors, spacing, typography} from '../theme/theme';
+import {colors, radius, spacing, typography} from '../theme/theme';
 import {useLibrary} from '../context/LibraryContext';
+import {usePlaylists} from '../context/PlaylistsContext';
+import {useDownloads} from '../context/DownloadsContext';
 import {useAuth} from '../context/AuthContext';
+import {useI18n} from '../i18n/LanguageContext';
 import {usePlay} from '../hooks/usePlay';
 import TrackRow from '../components/TrackRow';
 
 export default function LibraryScreen({navigation}) {
   const insets = useSafeAreaInsets();
   const {favorites, recent} = useLibrary();
+  const {playlists, createPlaylist} = usePlaylists();
+  const {downloads, removeDownload} = useDownloads();
   const {isGuest} = useAuth();
+  const {t} = useI18n();
   const play = usePlay();
   const [tab, setTab] = useState('favorites');
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState('');
 
   const data = tab === 'favorites' ? favorites : recent;
 
+  function doCreate() {
+    if (!newName.trim()) return;
+    createPlaylist(newName);
+    setNewName('');
+    setShowCreate(false);
+  }
+
   return (
     <View style={[styles.flex, {paddingTop: insets.top + spacing.md}]}>
-      <Text style={[typography.h1, styles.title]}>Your Library</Text>
+      <Text style={[typography.h1, styles.title]}>{t('your_library')}</Text>
 
-      <View style={styles.tabs}>
-        <Tab label="Liked" active={tab === 'favorites'} onPress={() => setTab('favorites')} />
-        <Tab label="Recently played" active={tab === 'recent'} onPress={() => setTab('recent')} />
-      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.tabs}>
+        <Tab label={t('liked')} active={tab === 'favorites'} onPress={() => setTab('favorites')} />
+        <Tab label={t('playlists')} active={tab === 'playlists'} onPress={() => setTab('playlists')} />
+        <Tab label={t('downloads')} active={tab === 'downloads'} onPress={() => setTab('downloads')} />
+        <Tab label={t('recent')} active={tab === 'recent'} onPress={() => setTab('recent')} />
+      </ScrollView>
 
       {isGuest && (
         <View style={styles.guestBanner}>
@@ -35,7 +65,78 @@ export default function LibraryScreen({navigation}) {
         </View>
       )}
 
-      {data.length === 0 ? (
+      {tab === 'playlists' ? (
+        <>
+          <TouchableOpacity style={styles.newBtn} onPress={() => setShowCreate(true)}>
+            <Ionicons name="add-circle" size={26} color={colors.primary} />
+            <Text style={styles.newBtnText}>{t('new_playlist')}</Text>
+          </TouchableOpacity>
+          {playlists.length === 0 ? (
+            <View style={styles.empty}>
+              <Ionicons name="albums-outline" size={48} color={colors.textFaint} />
+              <Text style={styles.emptyTitle}>No playlists yet</Text>
+              <Text style={styles.emptySub}>
+                Create one, then add songs with the “+” on any track.
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={playlists}
+              keyExtractor={i => i.id}
+              contentContainerStyle={{paddingHorizontal: spacing.lg, paddingBottom: 140}}
+              renderItem={({item}) => (
+                <TouchableOpacity
+                  style={styles.plRow}
+                  onPress={() => navigation.navigate('PlaylistDetail', {id: item.id})}>
+                  <View style={styles.plIcon}>
+                    <Ionicons name="musical-notes" size={22} color={colors.primary} />
+                  </View>
+                  <View style={{flex: 1}}>
+                    <Text style={styles.plName}>{item.name}</Text>
+                    <Text style={styles.plCount}>{item.tracks.length} songs</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
+                </TouchableOpacity>
+              )}
+            />
+          )}
+        </>
+      ) : tab === 'downloads' ? (
+        downloads.length === 0 ? (
+          <View style={styles.empty}>
+            <Ionicons name="download-outline" size={48} color={colors.textFaint} />
+            <Text style={styles.emptyTitle}>No downloads yet</Text>
+            <Text style={styles.emptySub}>
+              Tap “Download” on the player to save songs for offline listening.
+            </Text>
+          </View>
+        ) : (
+          <>
+            <TouchableOpacity style={styles.playAll} onPress={() => play(downloads, 0)}>
+              <Ionicons name="play-circle" size={30} color={colors.primary} />
+              <Text style={styles.playAllText}>{t('play_all_offline')}</Text>
+            </TouchableOpacity>
+            <FlatList
+              data={downloads}
+              keyExtractor={i => String(i.id)}
+              contentContainerStyle={{paddingHorizontal: spacing.lg, paddingBottom: 140}}
+              renderItem={({item, index}) => (
+                <View style={styles.plRowInline}>
+                  <View style={{flex: 1}}>
+                    <TrackRow track={item} onPress={() => play(downloads, index)} />
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => removeDownload(item.id)}
+                    hitSlop={8}
+                    style={{padding: 8}}>
+                    <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            />
+          </>
+        )
+      ) : data.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons
             name={tab === 'favorites' ? 'heart-outline' : 'time-outline'}
@@ -56,12 +157,10 @@ export default function LibraryScreen({navigation}) {
         </View>
       ) : (
         <>
-          {data.length > 0 && (
-            <TouchableOpacity style={styles.playAll} onPress={() => play(data, 0)}>
-              <Ionicons name="play-circle" size={30} color={colors.primary} />
-              <Text style={styles.playAllText}>Play all</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity style={styles.playAll} onPress={() => play(data, 0)}>
+            <Ionicons name="play-circle" size={30} color={colors.primary} />
+            <Text style={styles.playAllText}>{t('play_all')}</Text>
+          </TouchableOpacity>
           <FlatList
             data={data}
             keyExtractor={i => String(i.id)}
@@ -72,6 +171,31 @@ export default function LibraryScreen({navigation}) {
           />
         </>
       )}
+
+      {/* Create playlist modal */}
+      <Modal visible={showCreate} transparent animationType="fade" onRequestClose={() => setShowCreate(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setShowCreate(false)}>
+          <Pressable style={styles.dialog}>
+            <Text style={styles.dialogTitle}>{t('new_playlist')}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder={t('new_playlist')}
+              placeholderTextColor={colors.textFaint}
+              value={newName}
+              onChangeText={setNewName}
+              autoFocus
+            />
+            <View style={styles.dialogBtns}>
+              <TouchableOpacity onPress={() => setShowCreate(false)}>
+                <Text style={styles.cancelText}>{t('cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.createBtn} onPress={doCreate}>
+                <Text style={styles.createText}>{t('create')}</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -111,9 +235,46 @@ const styles = StyleSheet.create({
   guestText: {color: colors.textMuted, flex: 1, fontSize: 12, marginLeft: 6},
   playAll: {flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, marginBottom: spacing.sm},
   playAllText: {color: colors.text, fontWeight: '700', marginLeft: spacing.sm, fontSize: 15},
+  newBtn: {flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: spacing.lg, marginBottom: spacing.md},
+  newBtnText: {color: colors.text, fontWeight: '700', marginLeft: spacing.sm, fontSize: 15},
+  plRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  plIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.sm,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  plRowInline: {flexDirection: 'row', alignItems: 'center'},
+  plName: {color: colors.text, fontSize: 15, fontWeight: '700'},
+  plCount: {color: colors.textMuted, fontSize: 12, marginTop: 2},
   empty: {alignItems: 'center', marginTop: spacing.xxl * 1.5, paddingHorizontal: spacing.xl},
   emptyTitle: {...typography.h3, marginTop: spacing.md},
   emptySub: {color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm},
   cta: {marginTop: spacing.lg, backgroundColor: colors.primary, paddingHorizontal: spacing.xl, paddingVertical: 12, borderRadius: 999},
   ctaText: {color: '#000', fontWeight: '800'},
+  backdrop: {flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: spacing.xl},
+  dialog: {width: '100%', backgroundColor: colors.bgElevated, borderRadius: radius.lg, padding: spacing.lg},
+  dialogTitle: {...typography.h3, marginBottom: spacing.md},
+  input: {
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    color: colors.text,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  dialogBtns: {flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.xl, marginTop: spacing.lg},
+  cancelText: {color: colors.textMuted, fontWeight: '700', paddingHorizontal: spacing.md},
+  createBtn: {backgroundColor: colors.primary, paddingHorizontal: spacing.xl, paddingVertical: 10, borderRadius: radius.pill},
+  createText: {color: '#000', fontWeight: '800'},
 });

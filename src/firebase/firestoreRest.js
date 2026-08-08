@@ -51,6 +51,38 @@ export async function saveUserData(uid, data) {
   });
 }
 
+// Load the user's playlists (stored as a JSON string in the `playlists` field).
+export async function loadPlaylists(uid) {
+  const token = await idToken();
+  if (!token) return [];
+  const res = await fetch(`${BASE}/users/${uid}`, {
+    headers: {Authorization: `Bearer ${token}`},
+  });
+  if (!res.ok) return [];
+  const json = await res.json();
+  const raw = json?.fields?.playlists?.stringValue;
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw) || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export async function savePlaylists(uid, playlists) {
+  const token = await idToken();
+  if (!token) return;
+  const body = {fields: {playlists: {stringValue: JSON.stringify(playlists)}}};
+  await fetch(`${BASE}/users/${uid}?updateMask.fieldPaths=playlists`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+}
+
 // Set the account's `deactivated` flag (temporary deactivation).
 export async function setDeactivated(uid, value) {
   const token = await idToken();

@@ -9,6 +9,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import {colors} from '../theme/theme';
+import {useI18n} from '../i18n/LanguageContext';
 import {useAuth} from '../context/AuthContext';
 import MiniPlayer from '../components/MiniPlayer';
 import SplashScreen from '../components/SplashScreen';
@@ -23,6 +24,11 @@ import ProfileScreen from '../screens/ProfileScreen';
 import PlayerScreen from '../screens/PlayerScreen';
 import EqualizerScreen from '../screens/EqualizerScreen';
 import AccountSettingsScreen from '../screens/AccountSettingsScreen';
+import LyricsScreen from '../screens/LyricsScreen';
+import QueueScreen from '../screens/QueueScreen';
+import AddToPlaylistScreen from '../screens/AddToPlaylistScreen';
+import PlaylistDetailScreen from '../screens/PlaylistDetailScreen';
+import AlbumScreen from '../screens/AlbumScreen';
 
 const navTheme = {
   ...DefaultTheme,
@@ -67,12 +73,14 @@ function AppTabBar(props) {
 }
 
 function MainTabs() {
+  const {t} = useI18n();
   return (
     <Tab.Navigator
       tabBar={props => <AppTabBar {...props} />}
       screenOptions={({route}) => ({
         headerShown: false,
         animation: 'shift',
+        tabBarLabel: t(`tab_${route.name.toLowerCase()}`),
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textFaint,
         tabBarStyle: {
@@ -117,6 +125,23 @@ function AppNavigator() {
         component={AccountSettingsScreen}
         options={{presentation: 'modal', animation: 'slide_from_bottom'}}
       />
+      <RootStack.Screen
+        name="Lyrics"
+        component={LyricsScreen}
+        options={{presentation: 'modal', animation: 'slide_from_bottom'}}
+      />
+      <RootStack.Screen
+        name="Queue"
+        component={QueueScreen}
+        options={{presentation: 'modal', animation: 'slide_from_bottom'}}
+      />
+      <RootStack.Screen
+        name="AddToPlaylist"
+        component={AddToPlaylistScreen}
+        options={{presentation: 'modal', animation: 'slide_from_bottom'}}
+      />
+      <RootStack.Screen name="PlaylistDetail" component={PlaylistDetailScreen} />
+      <RootStack.Screen name="Album" component={AlbumScreen} />
     </RootStack.Navigator>
   );
 }

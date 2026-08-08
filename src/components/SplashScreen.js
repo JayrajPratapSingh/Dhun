@@ -1,7 +1,6 @@
 import React, {useEffect, useRef} from 'react';
-import {Animated, Easing, StyleSheet, Text, View} from 'react-native';
+import {Animated, Easing, Image, StyleSheet, Text, View} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import {colors, radius} from '../theme/theme';
 
 // Branded animated splash for a smooth app open. Logo scales + fades in with a
@@ -92,13 +91,11 @@ export default function SplashScreen({onDone}) {
             opacity: logoOpacity,
             transform: [{scale: Animated.multiply(logoScale, pulse)}],
           }}>
-          <LinearGradient
-            colors={['#8B5CF6', '#EC4899']}
-            start={{x: 0, y: 0}}
-            end={{x: 1, y: 1}}
-            style={styles.logo}>
-            <Ionicons name="musical-notes" size={52} color="#fff" />
-          </LinearGradient>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </Animated.View>
 
         <Animated.View

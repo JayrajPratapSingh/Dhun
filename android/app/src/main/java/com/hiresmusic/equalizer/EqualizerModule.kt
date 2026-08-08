@@ -23,14 +23,34 @@ class EqualizerModule(reactContext: ReactApplicationContext) :
     private var equalizer: Equalizer? = null
     private var bassBoost: BassBoost? = null
     private var available = false
+    // Audio session to attach to. 0 = global output mix (does NOT affect
+    // Bluetooth); the player's real ExoPlayer session id is set via setSession()
+    // so the EQ also works over Bluetooth/A2DP.
+    private var sessionId = 0
 
     override fun getName() = "EqualizerModule"
+
+    // Attach the effects to the player's audio session id (from track-player).
+    @ReactMethod
+    fun setSession(newSessionId: Int) {
+        if (newSessionId == sessionId && equalizer != null) return
+        sessionId = newSessionId
+        try {
+            equalizer?.release()
+        } catch (e: Throwable) {}
+        try {
+            bassBoost?.release()
+        } catch (e: Throwable) {}
+        equalizer = null
+        bassBoost = null
+        ensure()
+    }
 
     private fun ensure() {
         if (equalizer == null) {
             try {
-                // Priority 1000, session 0 = output mix (affects all app audio).
-                equalizer = Equalizer(1000, 0)
+                // Priority 1000, on the player's session (falls back to 0).
+                equalizer = Equalizer(1000, sessionId)
                 available = true
             } catch (e: Throwable) {
                 available = false
@@ -38,7 +58,7 @@ class EqualizerModule(reactContext: ReactApplicationContext) :
         }
         if (bassBoost == null) {
             try {
-                bassBoost = BassBoost(1000, 0)
+                bassBoost = BassBoost(1000, sessionId)
             } catch (e: Throwable) {
                 // ignore — bass boost optional
             }

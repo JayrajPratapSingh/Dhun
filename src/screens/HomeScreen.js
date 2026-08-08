@@ -14,6 +14,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import {colors, radius, spacing, typography} from '../theme/theme';
 import {getTrending, LANGUAGES, SOUTH_LANGUAGES} from '../api/jiosaavn';
 import {useAuth} from '../context/AuthContext';
+import {useI18n} from '../i18n/LanguageContext';
 import {usePlay} from '../hooks/usePlay';
 import TrackCard from '../components/TrackCard';
 import TrackRow from '../components/TrackRow';
@@ -42,6 +43,7 @@ const ALL_SECTIONS = ['hindi', 'punjabi', 'tamil', 'english', 'bhojpuri', 'marat
 export default function HomeScreen({navigation}) {
   const insets = useSafeAreaInsets();
   const {user} = useAuth();
+  const {t} = useI18n();
   const play = usePlay();
 
   const [lang, setLang] = useState('all');
@@ -81,9 +83,9 @@ export default function HomeScreen({navigation}) {
 
   const greeting = () => {
     const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return t('good_morning');
+    if (h < 18) return t('good_afternoon');
+    return t('good_evening');
   };
 
   const labelFor = key =>
@@ -99,7 +101,7 @@ export default function HomeScreen({navigation}) {
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>{greeting()}</Text>
-            <Text style={styles.name}>{user?.name || 'Music lover'}</Text>
+            <Text style={styles.name}>{user?.name || t('music_lover')}</Text>
           </View>
           <TouchableOpacity
             style={styles.searchBtn}
@@ -161,7 +163,7 @@ export default function HomeScreen({navigation}) {
                 <View style={styles.sectionHead}>
                   <View style={[styles.dot, {backgroundColor: grad[0]}]} />
                   <Text style={styles.sectionTitle}>
-                    {lang === 'all' ? `Trending ${labelFor(key)}` : `Trending ${labelFor(key)}`}
+                    {`${t('trending')} ${labelFor(key)}`}
                   </Text>
                 </View>
 

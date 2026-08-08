@@ -27,6 +27,8 @@ export default function EqualizerScreen({navigation}) {
 
   useEffect(() => {
     (async () => {
+      // Attach to the player's audio session so the EQ also works over Bluetooth.
+      await EqualizerAPI.attachToPlayerSession();
       const cfg = await EqualizerAPI.getConfig();
       if (!cfg) {
         setConfig({numberOfBands: 0});

@@ -13,10 +13,12 @@ import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {colors, radius, spacing, typography} from '../../theme/theme';
 import {useAuth} from '../../context/AuthContext';
+import {useI18n} from '../../i18n/LanguageContext';
 import {Field} from './LoginScreen';
 
 export default function RegisterScreen({navigation}) {
   const {register, continueAsGuest} = useAuth();
+  const {t} = useI18n();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -46,8 +48,8 @@ export default function RegisterScreen({navigation}) {
             <Ionicons name="chevron-back" size={26} color={colors.text} />
           </TouchableOpacity>
 
-          <Text style={typography.h1}>Create account</Text>
-          <Text style={styles.sub}>Join to save favorites and build playlists.</Text>
+          <Text style={typography.h1}>{t('create_account')}</Text>
+          <Text style={styles.sub}>{t('create_account_sub')}</Text>
 
           {!!error && (
             <View style={styles.errorBox}>
@@ -56,10 +58,10 @@ export default function RegisterScreen({navigation}) {
             </View>
           )}
 
-          <Field icon="person-outline" placeholder="Full name" value={name} onChangeText={setName} />
+          <Field icon="person-outline" placeholder={t('full_name')} value={name} onChangeText={setName} />
           <Field
             icon="mail-outline"
-            placeholder="Email"
+            placeholder={t('email')}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -79,18 +81,18 @@ export default function RegisterScreen({navigation}) {
             {busy ? (
               <ActivityIndicator color="#000" />
             ) : (
-              <Text style={styles.primaryText}>Create Account</Text>
+              <Text style={styles.primaryText}>{t('create_account')}</Text>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.guestBtn} onPress={continueAsGuest} disabled={busy}>
-            <Text style={styles.guestText}>Continue without login</Text>
+            <Text style={styles.guestText}>{t('continue_guest')}</Text>
           </TouchableOpacity>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
+            <Text style={styles.footerText}>{t('already_account')} </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.link}>Sign in</Text>
+              <Text style={styles.link}>{t('sign_in')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

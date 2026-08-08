@@ -4,8 +4,23 @@
 import {NativeModules} from 'react-native';
 
 const EQ = NativeModules.EqualizerModule || null;
+const TP = NativeModules.TrackPlayerModule || null;
 
 export const isSupported = !!EQ;
+
+// Attach the equalizer to the player's ExoPlayer audio session so it affects
+// the app's audio on all outputs — including Bluetooth (the global output mix
+// / session 0 does not affect A2DP). Call before reading config/state.
+export async function attachToPlayerSession() {
+  if (!EQ || !TP?.getAudioSessionId) return 0;
+  try {
+    const id = await TP.getAudioSessionId();
+    if (typeof id === 'number' && id > 0) EQ.setSession(id);
+    return id;
+  } catch (e) {
+    return 0;
+  }
+}
 
 // name + per-band gains in dB (60Hz, 230Hz, 910Hz, 3.6kHz, 14kHz)
 export const PRESETS = [
@@ -81,6 +96,7 @@ export function freqLabel(milliHz) {
 export default {
   isSupported,
   PRESETS,
+  attachToPlayerSession,
   getConfig,
   getState,
   setEnabled,
