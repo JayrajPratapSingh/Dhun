@@ -13,14 +13,17 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import {colors, radius, spacing, typography} from '../theme/theme';
 import {useAuth} from '../context/AuthContext';
 import {useLibrary} from '../context/LibraryContext';
+import {useDownloads} from '../context/DownloadsContext';
 import {useI18n} from '../i18n/LanguageContext';
 import {APP_LANGUAGES} from '../i18n/translations';
+import {APP_VERSION} from '../config/appInfo';
 import {initials} from '../utils/format';
 
 export default function ProfileScreen({navigation}) {
   const insets = useSafeAreaInsets();
   const {user, isGuest, logout} = useAuth();
   const {favorites, recent} = useLibrary();
+  const {downloads} = useDownloads();
   const {t, lang, setLang} = useI18n();
   const [showLang, setShowLang] = useState(false);
   const currentLangLabel =
@@ -66,10 +69,24 @@ export default function ProfileScreen({navigation}) {
           label={t('equalizer')}
           onPress={() => navigation.navigate('Equalizer')}
         />
-        <MenuItem icon="notifications-outline" label={t('notifications')} />
-        <MenuItem icon="cloud-download-outline" label={t('audio_downloads')} />
+        <MenuItem
+          icon="notifications-outline"
+          label={t('notifications')}
+          onPress={() => navigation.navigate('Notifications')}
+        />
+        <MenuItem
+          icon="cloud-download-outline"
+          label={t('audio_downloads')}
+          trailing={downloads.length ? String(downloads.length) : undefined}
+          onPress={() => navigation.navigate('Library', {tab: 'downloads'})}
+        />
+        {/* Fixed for now — shown as a value rather than a dead link. */}
         <MenuItem icon="pulse-outline" label={t('streaming_quality')} trailing="320 kbps" />
-        <MenuItem icon="information-circle-outline" label={t('about')} />
+        <MenuItem
+          icon="information-circle-outline"
+          label={t('about')}
+          onPress={() => navigation.navigate('About')}
+        />
       </View>
 
       {isGuest ? (
@@ -84,7 +101,7 @@ export default function ProfileScreen({navigation}) {
         </TouchableOpacity>
       )}
 
-      <Text style={styles.version}>Dhun • Powered by JioSaavn • v1.0.0</Text>
+      <Text style={styles.version}>Dhun • Powered by JioSaavn • v{APP_VERSION}</Text>
 
       {/* Language picker */}
       <Modal visible={showLang} transparent animationType="slide" onRequestClose={() => setShowLang(false)}>
@@ -124,11 +141,18 @@ function Stat({label, value, icon}) {
 
 function MenuItem({icon, label, trailing, onPress}) {
   return (
-    <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.menuItem}
+      activeOpacity={onPress ? 0.7 : 1}
+      disabled={!onPress}
+      onPress={onPress}>
       <Ionicons name={icon} size={20} color={colors.text} />
       <Text style={styles.menuLabel}>{label}</Text>
       {!!trailing && <Text style={styles.menuTrailing}>{trailing}</Text>}
-      <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+      {/* Only promise a destination when there actually is one. */}
+      {!!onPress && (
+        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+      )}
     </TouchableOpacity>
   );
 }

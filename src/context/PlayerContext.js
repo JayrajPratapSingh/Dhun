@@ -117,6 +117,22 @@ export function PlayerProvider({children}) {
     setRateState(r);
   }, []);
 
+  // The native player outlives this JS context (e.g. the app is killed while the
+  // notification keeps playing). Without reading the real rate back, the UI would
+  // reset to "1x" while audio carried on at the old speed.
+  useEffect(() => {
+    if (!activeTrack) return;
+    let cancelled = false;
+    TrackPlayer.getRate()
+      .then(r => {
+        if (!cancelled && typeof r === 'number' && r > 0) setRateState(r);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTrack?.id]);
+
   // --- Sleep timer ------------------------------------------------------
   const [sleepMinutes, setSleepMinutes] = useState(null);
   const sleepTimer = useRef(null);

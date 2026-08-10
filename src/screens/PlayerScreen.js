@@ -98,7 +98,9 @@ export default function PlayerScreen({navigation}) {
   const artUri = current.artworkLarge || current.artwork;
 
   return (
-    <View style={styles.flex}>
+    // Bottom inset keeps the utility row (Equalizer / Sleep / speed) clear of the
+    // system nav bar, which was covering it and swallowing those taps.
+    <View style={[styles.flex, {paddingBottom: insets.bottom}]}>
       {/* Animated blurred-artwork background */}
       {artUri ? (
         <Animated.Image
@@ -343,10 +345,12 @@ function UtilButton({icon, label, onPress, accent, active}) {
 }
 
 function PickerModal({visible, title, options, selected, onSelect, onClose, accent}) {
+  const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Pressable style={styles.sheet}>
+        {/* Bottom inset so the last option isn't tucked under the system nav bar. */}
+        <Pressable style={[styles.sheet, {paddingBottom: spacing.xxl + insets.bottom}]}>
           <Text style={styles.sheetTitle}>{title}</Text>
           {options.map(opt => {
             const isSel = selected === opt.value;
@@ -382,9 +386,18 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   headerTitle: {color: colors.text, fontWeight: '700', fontSize: 15},
-  artworkWrap: {alignItems: 'center', marginTop: spacing.md, paddingHorizontal: spacing.xl},
+  // Absorbs the leftover vertical space and shrinks on short screens, so the
+  // controls and utility row below stay on-screen instead of overflowing.
+  artworkWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.xl,
+    flex: 1,
+    minHeight: 0,
+  },
   artwork: {
-    width: '100%',
+    flex: 1,
     aspectRatio: 1,
     borderRadius: radius.xl,
     maxWidth: 340,

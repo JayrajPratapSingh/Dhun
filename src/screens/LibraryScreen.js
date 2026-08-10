@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   FlatList,
   Modal,
@@ -21,7 +21,7 @@ import {useI18n} from '../i18n/LanguageContext';
 import {usePlay} from '../hooks/usePlay';
 import TrackRow from '../components/TrackRow';
 
-export default function LibraryScreen({navigation}) {
+export default function LibraryScreen({navigation, route}) {
   const insets = useSafeAreaInsets();
   const {favorites, recent} = useLibrary();
   const {playlists, createPlaylist} = usePlaylists();
@@ -33,7 +33,21 @@ export default function LibraryScreen({navigation}) {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
 
+  // Let other screens deep-link to a tab, e.g. Profile > Audio & downloads.
+  // The param is cleared once consumed so navigating here again still works.
+  const requestedTab = route?.params?.tab;
+  useEffect(() => {
+    if (!requestedTab) return;
+    setTab(requestedTab);
+    navigation.setParams({tab: undefined});
+  }, [requestedTab, navigation]);
+
   const data = tab === 'favorites' ? favorites : recent;
+  // Clear the mini player and tab bar (which now carries the bottom inset).
+  const listContent = {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: 140 + insets.bottom,
+  };
 
   function doCreate() {
     if (!newName.trim()) return;
@@ -49,6 +63,7 @@ export default function LibraryScreen({navigation}) {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.tabsScroll}
         contentContainerStyle={styles.tabs}>
         <Tab label={t('liked')} active={tab === 'favorites'} onPress={() => setTab('favorites')} />
         <Tab label={t('playlists')} active={tab === 'playlists'} onPress={() => setTab('playlists')} />
@@ -83,7 +98,7 @@ export default function LibraryScreen({navigation}) {
             <FlatList
               data={playlists}
               keyExtractor={i => i.id}
-              contentContainerStyle={{paddingHorizontal: spacing.lg, paddingBottom: 140}}
+              contentContainerStyle={listContent}
               renderItem={({item}) => (
                 <TouchableOpacity
                   style={styles.plRow}
@@ -119,7 +134,7 @@ export default function LibraryScreen({navigation}) {
             <FlatList
               data={downloads}
               keyExtractor={i => String(i.id)}
-              contentContainerStyle={{paddingHorizontal: spacing.lg, paddingBottom: 140}}
+              contentContainerStyle={listContent}
               renderItem={({item, index}) => (
                 <View style={styles.plRowInline}>
                   <View style={{flex: 1}}>
@@ -164,7 +179,7 @@ export default function LibraryScreen({navigation}) {
           <FlatList
             data={data}
             keyExtractor={i => String(i.id)}
-            contentContainerStyle={{paddingHorizontal: spacing.lg, paddingBottom: 140}}
+            contentContainerStyle={listContent}
             renderItem={({item, index}) => (
               <TrackRow track={item} index={index} onPress={() => play(data, index)} />
             )}
@@ -211,13 +226,17 @@ function Tab({label, active, onPress}) {
 const styles = StyleSheet.create({
   flex: {flex: 1, backgroundColor: colors.bg},
   title: {paddingHorizontal: spacing.lg, marginBottom: spacing.md},
-  tabs: {flexDirection: 'row', paddingHorizontal: spacing.lg, gap: spacing.sm, marginBottom: spacing.sm},
+  // A horizontal ScrollView in a column parent grows to fill the leftover
+  // height, which stretched the pills into full-screen bars. Pin it to its
+  // content instead.
+  tabsScroll: {flexGrow: 0, flexShrink: 0, marginBottom: spacing.md},
+  // alignItems keeps the pills at their natural height rather than stretching.
+  tabs: {flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, gap: spacing.sm},
   tab: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: 999,
     backgroundColor: colors.card,
-    marginRight: spacing.sm,
   },
   tabActive: {backgroundColor: colors.primary},
   tabText: {color: colors.textMuted, fontWeight: '700', fontSize: 13},
@@ -232,11 +251,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: 'rgba(245,197,24,0.1)',
   },
-  guestText: {color: colors.textMuted, flex: 1, fontSize: 12, marginLeft: 6},
-  playAll: {flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, marginBottom: spacing.sm},
-  playAllText: {color: colors.text, fontWeight: '700', marginLeft: spacing.sm, fontSize: 15},
-  newBtn: {flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: spacing.lg, marginBottom: spacing.md},
-  newBtnText: {color: colors.text, fontWeight: '700', marginLeft: spacing.sm, fontSize: 15},
+  // These rows already space their children with `gap`; an extra marginLeft on
+  // the label doubled it.
+  guestText: {color: colors.textMuted, flex: 1, fontSize: 12},
+  playAll: {flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.sm},
+  playAllText: {color: colors.text, fontWeight: '700', fontSize: 15},
+  newBtn: {flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.md},
+  newBtnText: {color: colors.text, fontWeight: '700', fontSize: 15},
   plRow: {
     flexDirection: 'row',
     alignItems: 'center',

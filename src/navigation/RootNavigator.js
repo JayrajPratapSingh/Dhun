@@ -6,6 +6,7 @@ import {
   createBottomTabNavigator,
   BottomTabBar,
 } from '@react-navigation/bottom-tabs';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import {colors} from '../theme/theme';
@@ -24,6 +25,8 @@ import ProfileScreen from '../screens/ProfileScreen';
 import PlayerScreen from '../screens/PlayerScreen';
 import EqualizerScreen from '../screens/EqualizerScreen';
 import AccountSettingsScreen from '../screens/AccountSettingsScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
+import AboutScreen from '../screens/AboutScreen';
 import LyricsScreen from '../screens/LyricsScreen';
 import QueueScreen from '../screens/QueueScreen';
 import AddToPlaylistScreen from '../screens/AddToPlaylistScreen';
@@ -74,6 +77,7 @@ function AppTabBar(props) {
 
 function MainTabs() {
   const {t} = useI18n();
+  const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
       tabBar={props => <AppTabBar {...props} />}
@@ -86,8 +90,11 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: colors.bgElevated,
           borderTopColor: colors.border,
-          height: 64,
-          paddingBottom: 8,
+          // A fixed height opts out of the safe-area padding the navigator would
+          // add itself, which buried the bar under the system nav on 3-button
+          // devices — so add the inset back in explicitly.
+          height: 64 + insets.bottom,
+          paddingBottom: 8 + insets.bottom,
           paddingTop: 6,
         },
         tabBarLabelStyle: {fontSize: 11, fontWeight: '600'},
@@ -123,6 +130,16 @@ function AppNavigator() {
       <RootStack.Screen
         name="Account"
         component={AccountSettingsScreen}
+        options={{presentation: 'modal', animation: 'slide_from_bottom'}}
+      />
+      <RootStack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{presentation: 'modal', animation: 'slide_from_bottom'}}
+      />
+      <RootStack.Screen
+        name="About"
+        component={AboutScreen}
         options={{presentation: 'modal', animation: 'slide_from_bottom'}}
       />
       <RootStack.Screen

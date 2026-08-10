@@ -1,9 +1,6 @@
 // One-time player initialization with hi-res friendly options.
-import TrackPlayer, {
-  AppKilledPlaybackBehavior,
-  Capability,
-  RepeatMode,
-} from 'react-native-track-player';
+import TrackPlayer, {RepeatMode} from 'react-native-track-player';
+import {loadSettings, optionsFor} from './notificationOptions';
 
 let isReady = false;
 
@@ -27,27 +24,8 @@ export async function setupPlayer() {
       autoHandleInterruptions: true,
     });
 
-    await TrackPlayer.updateOptions({
-      android: {
-        appKilledPlaybackBehavior:
-          AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
-      },
-      capabilities: [
-        Capability.Play,
-        Capability.Pause,
-        Capability.SkipToNext,
-        Capability.SkipToPrevious,
-        Capability.SeekTo,
-        Capability.Stop,
-      ],
-      compactCapabilities: [
-        Capability.Play,
-        Capability.Pause,
-        Capability.SkipToNext,
-        Capability.SkipToPrevious,
-      ],
-      progressUpdateEventInterval: 1,
-    });
+    // Honour the user's saved notification preferences from the very first play.
+    await TrackPlayer.updateOptions(optionsFor(await loadSettings()));
 
     await TrackPlayer.setRepeatMode(RepeatMode.Queue);
     isReady = true;

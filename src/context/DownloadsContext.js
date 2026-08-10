@@ -9,6 +9,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import {Alert} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import {getStreamUrl} from '../api/jiosaavn';
@@ -58,8 +59,9 @@ export function DownloadsProvider({children}) {
     if (isDownloaded(track.id) || isDownloading(track.id)) return;
     setProgress(p => ({...p, [track.id]: 0}));
     try {
+      await ReactNativeBlobUtil.fs.mkdir(DIR).catch(() => {});
       const url = track.url || (await getStreamUrl(track.id));
-      if (!url) throw new Error('no url');
+      if (!url) throw new Error('Could not resolve a stream URL for this song');
       const path = `${DIR}/${track.id}.mp4`;
       const task = ReactNativeBlobUtil.config({path, fileCache: true}).fetch(
         'GET',
@@ -71,13 +73,22 @@ export function DownloadsProvider({children}) {
         setProgress(p => ({...p, [track.id]: pct}));
       });
       const res = await task;
+      const status = res.info().status;
+      if (status < 200 || status >= 300) {
+        throw new Error(`Server returned HTTP ${status}`);
+      }
       const localPath = res.path();
       const entry = {...track, url: `file://${localPath}`, _localPath: localPath, downloadedAt: Date.now()};
       const next = [entry, ...ref.current];
       setDownloads(next);
       persist(next);
     } catch (e) {
-      // swallow — UI just won't show it as downloaded
+      // A failed fetch can still leave a partial file behind; don't keep it.
+      try {
+        await ReactNativeBlobUtil.fs.unlink(`${DIR}/${track.id}.mp4`);
+      } catch (e2) {}
+      console.error('[Downloads] failed to download track', track?.id, e);
+      Alert.alert('Download failed', e?.message || 'Something went wrong while downloading this song.');
     } finally {
       setProgress(p => {
         const {[track.id]: _, ...rest} = p;

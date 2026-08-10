@@ -1,0 +1,36 @@
+diff --git a/node_modules/react-native-blob-util/android/src/main/java/com/ReactNativeBlobUtil/Response/ReactNativeBlobUtilFileResp.java b/node_modules/react-native-blob-util/android/src/main/java/com/ReactNativeBlobUtil/Response/ReactNativeBlobUtilFileResp.java
+index ccceaf1..9992368 100644
+--- a/node_modules/react-native-blob-util/android/src/main/java/com/ReactNativeBlobUtil/Response/ReactNativeBlobUtilFileResp.java
++++ b/node_modules/react-native-blob-util/android/src/main/java/com/ReactNativeBlobUtil/Response/ReactNativeBlobUtilFileResp.java
+@@ -123,6 +123,11 @@ public class ReactNativeBlobUtilFileResp extends ResponseBody {
+                 bytesDownloaded += read > 0 ? read : 0;
+                 if (read > 0) {
+                     ofStream.write(bytes, 0, (int) read);
++                    // A Source must also hand the bytes it consumed to `sink`.
++                    // Without this the BufferedSource wrapping us stays empty, so the
++                    // caller draining this stream sees EOF after the very first chunk
++                    // and the download stops a few hundred bytes in.
++                    sink.write(bytes, 0, (int) read);
+                 } else if (contentLength() == -1 && read == -1) {
+                     // End marker has been received for chunked download
+                     isEndMarkerReceived = true;
+@@ -133,7 +138,9 @@ public class ReactNativeBlobUtilFileResp extends ResponseBody {
+ 
+                     // For non-chunked download, progress is received / total
+                     // For chunked download, progress can be either 0 (started) or 1 (ended)
+-                    float progress = (contentLength() != -1) ? bytesDownloaded / contentLength() : ((isEndMarkerReceived) ? 1 : 0);
++                    // Float cast matters: long / long truncates to 0 for the whole
++                    // download, which defeats count-based progress throttling.
++                    float progress = (contentLength() != -1) ? (float) bytesDownloaded / contentLength() : ((isEndMarkerReceived) ? 1 : 0);
+ 
+                     if (reportConfig != null && reportConfig.shouldReport(progress /* progress */)) {
+                         if (contentLength() != -1) {
+@@ -170,7 +177,7 @@ public class ReactNativeBlobUtilFileResp extends ResponseBody {
+ 
+         @Override
+         public Timeout timeout() {
+-            return null;
++            return Timeout.NONE;
+         }
+ 
+         @Override
