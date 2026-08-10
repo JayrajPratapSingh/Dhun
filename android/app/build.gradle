@@ -84,7 +84,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 2
-        versionName "1.2"
+        versionName "1.1"
     }
     // Real release signing is used only when all four properties are present.
     // Put them in your USER-level ~/.gradle/gradle.properties (never in the repo —
