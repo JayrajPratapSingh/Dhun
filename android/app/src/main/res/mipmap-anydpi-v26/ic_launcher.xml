@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 8+ composes the launcher icon from these two layers and applies the
+     launcher's own mask. Without this file the gold PNG fell back to legacy
+     handling, which shrinks it onto a white rounded-square backing.
+     The 10% inset keeps the logo's gold frame inside the 66% safe zone so a
+     circular mask doesn't clip it. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground>
+        <inset
+            android:drawable="@drawable/ic_launcher_gold"
+            android:inset="10%" />
+    </foreground>
+</adaptive-icon>

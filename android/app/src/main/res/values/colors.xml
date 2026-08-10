@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches the near-black interior of the gold logo, so the adaptive icon's
+         background blends into the artwork instead of showing a white shim. -->
+    <color name="ic_launcher_background">#1C1206</color>
+</resources>
